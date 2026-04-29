@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Rendimiento del Personal | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/material_red.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-bg">
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn active"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container">
+            <a href="/registrar_personal" class="menu-btn"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/registrar_novedad" class="menu-btn"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+
+        <button class="dropdown-btn"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/crear_admin" class="menu-btn"><i class="fas fa-key"></i> Administradores</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center" style="align-items: flex-start;">
+        <h2 style="margin: 0 0 20px 0; color: var(--dark); border-left: 5px solid var(--red); padding-left: 15px;">📊 Análisis de Rendimiento y Puntualidad</h2>
+        
+        <form method="POST" action="/rendimiento" class="card" style="width: 100%; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: flex-end; gap: 15px;">
+                    <div class="date-box" style="margin:0;">
+                        <label>Desde:</label>
+                        <div class="custom-date-wrapper">
+                            <input type="text" name="desde" class="datepicker custom-date-input" placeholder="DD / MM / AAAA" autocomplete="off" value="{{ desde }}">
+                            <i class="fas fa-calendar-alt calendar-icon"></i>
+                        </div>
+                    </div>
+                    <div class="date-box" style="margin:0;">
+                        <label>Hasta:</label>
+                        <div class="custom-date-wrapper">
+                            <input type="text" name="hasta" class="datepicker custom-date-input" placeholder="DD / MM / AAAA" autocomplete="off" value="{{ hasta }}">
+                            <i class="fas fa-calendar-alt calendar-icon"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-filter" style="margin: 0 !important; height: 40px; padding: 0 20px;"><i class="fas fa-chart-pie"></i> Calcular</button>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; border-left: 2px solid #ccc; padding-left: 20px;">
+                    <a href="/exportar_rendimiento{% if desde and hasta %}?desde={{ desde }}&hasta={{ hasta }}{% endif %}" class="btn-excel" target="_blank" style="margin:0;"><i class="fas fa-download"></i> Descargar Excel con Gráficas</a>
+                </div>
+            </div>
+        </form>
+
+        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Buscar empleado por nombre..." style="margin-top: 5px;">
+
+        {% set deptos = [] %}
+        {% for cedula, data in stats.items() %}
+            {% if data.departamento not in deptos %}
+                {% set _ = deptos.append(data.departamento) %}
+            {% endif %}
+        {% endfor %}
+
+        {% for depto in deptos|sort %}
+        <div class="depto-section" id="depto-{{ depto|replace(' ', '') }}">
+            <h3 class="depto-title"><i class="fas fa-building"></i> Departamento: {{ depto }}</h3>
+            <div class="cards-grid">
+                {% for cedula, data in stats.items() %}
+                    {% if data.departamento == depto %}
+                    <div class="user-card">
+                        <h4 class="user-name">{{ data.nombre }}</h4>
+                        <p>{{ data.cargo }} | CI: {{ cedula }}</p>
+                        
+                        {% if data.total > 0 %}
+                            <div class="chart-container">
+                                <canvas class="rendimientoChart" 
+                                    data-puntual="{{ data.puntual }}" 
+                                    data-tarde="{{ data.tarde }}" 
+                                    data-anticipada="{{ data.anticipada }}"
+                                    data-nomarco="{{ data.no_marco }}"></canvas>
+                            </div>
+                            <div class="stats-mini">
+                                <span style="color:#27ae60"><i class="fas fa-check-circle"></i> {{ data.puntual }}</span>
+                                <span style="color:#e67e22"><i class="fas fa-clock"></i> {{ data.tarde }}</span>
+                                <span style="color:#c0392b"><i class="fas fa-times-circle"></i> {{ data.no_marco }}</span>
+                            </div>
+                        {% else %}
+                            <div style="height: 150px; display:flex; align-items:center; justify-content:center; color:#999; font-style:italic;">
+                                Sin registros en estas fechas.
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Inicializar Flatpickr con el tema moderno igual que en reportes
+            flatpickr(".datepicker", { 
+                locale: "es", 
+                dateFormat: "Y-m-d", 
+                altInput: true, 
+                altFormat: "d/m/Y", 
+                allowInput: true, 
+                disableMobile: "true" 
+            });
+
+            var currentUrl = window.location.pathname;
+            var links = document.querySelectorAll('.dropdown-container a');
+            links.forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) {
+                    link.classList.add('active');
+                    link.parentElement.style.display = 'block';
+                    link.parentElement.previousElementSibling.classList.add('active');
+                }
+            });
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            }
+
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keyup', function() {
+                const filter = searchInput.value.toLowerCase();
+                const cards = document.querySelectorAll('.user-card');
+                cards.forEach(card => {
+                    const name = card.querySelector('.user-name').innerText.toLowerCase();
+                    if (name.includes(filter)) { card.style.display = ""; } 
+                    else { card.style.display = "none"; }
+                });
+            });
+
+            const canvases = document.querySelectorAll('.rendimientoChart');
+            canvases.forEach(canvas => {
+                const puntual = parseInt(canvas.getAttribute('data-puntual'));
+                const tarde = parseInt(canvas.getAttribute('data-tarde'));
+                const anticipada = parseInt(canvas.getAttribute('data-anticipada'));
+                const nomarco = parseInt(canvas.getAttribute('data-nomarco'));
+
+                new Chart(canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Puntual', 'Llegada Tarde', 'Salida Temprano', 'No Marcó Salida'],
+                        datasets: [{
+                            data: [puntual, tarde, anticipada, nomarco],
+                            backgroundColor: ['#27ae60', '#f1c40f', '#e67e22', '#c0392b'],
+                            borderWidth: 2,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

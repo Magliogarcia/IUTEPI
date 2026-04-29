@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Horarios | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body class="dashboard-bg">
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn active"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container" style="display: block;">
+            <a href="/registrar_personal" class="menu-btn"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn active"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/registrar_novedad" class="menu-btn"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+
+        <button class="dropdown-btn"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/crear_admin" class="menu-btn"><i class="fas fa-key"></i> Administradores</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center">
+        {% if mensaje %}
+            <script>document.addEventListener("DOMContentLoaded", function() { Swal.fire({ title: 'Aviso', text: "{{ mensaje | safe }}", icon: "{{ tipo_mensaje }}", confirmButtonColor: '#3498db' }); });</script>
+        {% endif %}
+
+        <div class="card card-form" style="max-width: 600px;">
+            <h2 style="color:#3498db; margin-top:0; text-align:center;"><i class="fas fa-calendar-alt"></i> Planificador de Horarios</h2>
+            <p style="text-align:center; color:#666; font-size:0.9rem;">Asigna bloques de trabajo o clases a cualquier empleado.</p>
+            <form method="GET" action="/gestionar_horarios">
+                <label style="font-weight:bold; color:#555;">Seleccione el Empleado:</label>
+                <div style="display: flex; gap: 10px;">
+                    <select name="cedula" required style="margin:0; height: 42px;">
+                        <option value="" disabled {% if not cedula_seleccionada %}selected{% endif %}>Buscar en nómina general...</option>
+                        {% for d in empleados %}
+                            <option value="{{ d.cedula }}" {% if cedula_seleccionada == d.cedula %}selected{% endif %}>{{ d.nombre }} ({{ d.departamento }})</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-blue" style="width:auto; margin:0; height: 42px;"><i class="fas fa-search"></i> Buscar</button>
+                </div>
+            </form>
+        </div>
+
+        {% if cedula_seleccionada %}
+        <div class="horario-container">
+            <div class="horario-header">
+                <h3 style="margin:0; color:#333;"><i class="fas fa-user-tie"></i> {{ nombre_empleado }}</h3>
+                <span class="badge bg-blue" style="font-size: 1rem;">CI: {{ cedula_seleccionada }}</span>
+            </div>
+
+            <form method="POST" action="/gestionar_horarios">
+                <input type="hidden" name="cedula" value="{{ cedula_seleccionada }}">
+                <div class="horario-form-grid">
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <label style="font-weight:bold; font-size: 0.85rem; color:#555; margin-bottom: 5px;">Materia o Turno</label>
+                        <input type="text" name="materia" placeholder="Ej: Clase / Turno Mañana" required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <label style="font-weight:bold; font-size: 0.85rem; color:#555; margin-bottom: 5px;">Día</label>
+                        <select name="dia_semana" required>
+                            {% for i in range(7) %} <option value="{{ i }}">{{ dias[i] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <label style="font-weight:bold; font-size: 0.85rem; color:#555; margin-bottom: 5px;">Entrada</label>
+                        <input type="text" name="hora_entrada" class="timepicker" placeholder="Toque..." required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <label style="font-weight:bold; font-size: 0.85rem; color:#555; margin-bottom: 5px;">Salida</label>
+                        <input type="text" name="hora_salida" class="timepicker" placeholder="Toque..." required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                        <button type="submit" name="guardar_horario" class="btn-in" style="margin:0; height: 42px;"><i class="fas fa-plus"></i> Añadir</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="calendar-wrap">
+                <div class="time-axis">
+                    {% for h in range(start_h, end_h + 1) %}
+                    <div class="time-label">{{ "%02d:00" % h }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="days-container">
+                    {% for i in range(7) %}
+                    <div class="day-col">
+                        <div class="day-header">{{ dias[i] }}</div>
+                        <div class="day-blocks-wrapper">
+                            {% for h in range(start_h, end_h) %}
+                            <div class="grid-line"></div>
+                            {% endfor %}
+                            
+                            {% if horarios_semana[i]|length > 0 %}
+                                {% for block in horarios_semana[i] %}
+                                <div class="cal-block" style="top: {{ block.top }}%; height: {{ block.height }}%;" title="{{ block.materia }} ({{ block.hora_in_fmt }} - {{ block.hora_out_fmt }})">
+                                    <strong>{{ block.materia }}</strong>
+                                    <span style="display:block; color:#e0f7fa;"><i class="fas fa-sign-in-alt"></i> {{ block.hora_in_fmt }}</span>
+                                    <span style="display:block; color:#ffcccc;"><i class="fas fa-sign-out-alt"></i> {{ block.hora_out_fmt }}</span>
+                                    <a href="#" class="del-btn" onclick="confirmarBorrado(event, '/eliminar_horario/{{ block.id }}/{{ cedula_seleccionada }}')">&times;</a>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <p style="text-align: center; color: #c0392b; font-size: 0.85rem; margin-top: 15px; font-weight: bold;">⚠️ IMPORTANTE: Si el empleado no tiene un bloque de horario asignado en este calendario para el día actual, EL SISTEMA BLOQUEARÁ SU ENTRADA.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var currentUrl = window.location.pathname;
+            var links = document.querySelectorAll('.dropdown-container a');
+            links.forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) {
+                    link.classList.add('active'); link.parentElement.style.display = 'block';
+                    if (link.parentElement.previousElementSibling) { link.parentElement.previousElementSibling.classList.add('active'); }
+                }
+            });
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() {
+                    this.classList.toggle("active"); var c = this.nextElementSibling;
+                    c.style.display = c.style.display === "block" ? "none" : "block";
+                });
+            }
+
+            flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", altInput: true, altFormat: "h:i K", allowInput: true });
+        });
+
+        function confirmarBorrado(e, url) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Eliminar bloque?', text: 'Se borrará este horario.', icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#c0392b', confirmButtonText: 'Borrar'
+            }).then((result) => { if (result.isConfirmed) { window.location.href = url; } });
+        }
+    </script>
+</body>
+</html>
