@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Directorio de Personal | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="dashboard-bg">
+
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn active"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container" style="display: block;">
+            <a href="/registrar_personal" class="menu-btn active"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/registrar_novedad" class="menu-btn"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+
+        <button class="dropdown-btn"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/crear_admin" class="menu-btn"><i class="fas fa-key"></i> Administradores</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center">
+        <div class="card card-form">
+            <h2 style="color:#8e44ad; margin-top:0; text-align:center;"><i class="fas fa-id-badge"></i> Ingresar Personal</h2>
+            <p style="text-align:center; color:#666; font-size:0.9rem;">Agrega un empleado nuevo a la nómina del sistema.</p>
+            
+            {% if mensaje %}
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        Swal.fire({ title: 'Notificación', text: "{{ mensaje | safe }}", icon: "{{ tipo_mensaje }}", confirmButtonColor: '#8e44ad' });
+                    });
+                </script>
+            {% endif %}
+
+            <form method="POST" id="form-personal" novalidate>
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Cédula de Identidad</label>
+                <input type="text" name="cedula" id="input_cedula" placeholder="Ej: 28123456" 
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                
+                <div class="form-row">
+                    <div class="col">
+                        <label style="font-size:0.85rem; font-weight:bold; color:#555;">Nombre</label>
+                        <input type="text" name="nombre" id="input_nombre" placeholder="Ej: Maglio" 
+                               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 15)">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.85rem; font-weight:bold; color:#555;">Apellido</label>
+                        <input type="text" name="apellido" id="input_apellido" placeholder="Ej: Garcia" 
+                               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 15)">
+                    </div>
+                </div>
+                
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Departamento</label>
+                <select name="departamento" id="input_depto">
+                    <option value="" disabled selected>Seleccione el departamento...</option>
+                    <option value="Administrativo">Administrativo</option>
+                    <option value="Ambiente">Ambiente</option>
+                    <option value="Docente">Docente</option>
+                </select>
+
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Cargo / Área</label>
+                <input type="text" name="cargo" id="input_cargo" placeholder="Ej: Ingeniero de Software" 
+                       oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 25)">
+                
+                <button type="submit" class="btn-purple"><i class="fas fa-save"></i> GUARDAR PERSONAL</button>
+            </form>
+        </div>
+
+        <div class="card" style="width: 100%; max-width: 800px;">
+            <h3 style="margin-top:0; border-left: 5px solid #8e44ad; padding-left: 10px;">Directorio de Personal</h3>
+            <table>
+                <thead>
+                    <tr><th>Cédula</th><th>Nombre Completo</th><th>Cargo / Rol</th><th>Acción</th></tr>
+                </thead>
+                <tbody>
+                    {% if personal_agrupado %}
+                        {% for depto, lista_empleados in personal_agrupado.items() %}
+                            <tr style="background-color: #2c3e50; color: white;">
+                                <td colspan="4" style="font-weight: bold; font-size: 0.95rem; padding: 10px 15px;">
+                                    <i class="fas fa-building"></i> Departamento: {{ depto }}
+                                </td>
+                            </tr>
+                            {% for p in lista_empleados %}
+                            <tr>
+                                <td style="font-weight:bold;">{{ p.cedula }}</td>
+                                <td>{{ p.nombre }}</td>
+                                <td><span class="cargo-tag">{{ p.cargo }}</span></td>
+                                <td style="text-align:center;">
+                                    <a href="/editar_personal/{{ p.id }}" class="btn-delete-small badge bg-blue" style="text-decoration:none; margin-right: 5px;"><i class="fas fa-edit"></i> Editar</a>
+                                    <a href="#" class="btn-delete-small badge bg-red" style="text-decoration:none;" 
+                                       onclick="confirmarEliminacion(event, '/eliminar_personal/{{ p.id }}', '{{ p.nombre }}')">
+                                       <i class="fas fa-user-minus"></i> Eliminar
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" style="text-align:center; padding: 20px;">No hay personal registrado en la base de datos.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var currentUrl = window.location.pathname;
+            var links = document.querySelectorAll('.dropdown-container a');
+            links.forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) {
+                    link.classList.add('active');
+                    link.parentElement.style.display = 'block';
+                    link.parentElement.previousElementSibling.classList.add('active');
+                }
+            });
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            }
+        });
+
+        document.getElementById('form-personal').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            let cedula = document.getElementById('input_cedula').value.trim();
+            let nombre = document.getElementById('input_nombre').value.trim();
+            let apellido = document.getElementById('input_apellido').value.trim();
+            let depto = document.getElementById('input_depto').value;
+            let cargo = document.getElementById('input_cargo').value.trim();
+
+            if (cedula.length < 7 || cedula.length > 8) { Swal.fire('Error', 'La cédula debe tener entre 7 y 8 números.', 'error'); return; }
+            if (nombre.length < 3 || nombre.length > 15) { Swal.fire('Error', 'El nombre debe tener entre 3 y 15 letras.', 'error'); return; }
+            if (apellido.length < 3 || apellido.length > 15) { Swal.fire('Error', 'El apellido debe tener entre 3 y 15 letras.', 'error'); return; }
+            if (!depto) { Swal.fire('Error', 'Debes seleccionar un Departamento.', 'error'); return; }
+            if (cargo.length < 4 || cargo.length > 25) { Swal.fire('Error', 'El Cargo / Área debe tener entre 4 y 25 letras.', 'error'); return; }
+
+            this.submit();
+        });
+
+        function confirmarEliminacion(e, url, nombre) {
+            e.preventDefault();
+            Swal.fire({
+                title: '⚠️ ¡PELIGRO EXTREMO!',
+                text: `¿Estás seguro de que quieres eliminar a ${nombre} del sistema? Esto lo borrará permanentemente de la nómina.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#c0392b',
+                cancelButtonColor: '#777',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

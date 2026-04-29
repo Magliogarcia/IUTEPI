@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>S.G.A. | IUTEPI</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="dashboard-bg">
+
+    <div class="sidebar">
+        <div class="logo-box">
+            <img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI">
+        </div>
+        
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-clock"></i> Terminal de Asistencia
+        </div>
+        <a href="/" class="menu-btn active"><i class="fas fa-camera"></i> Control Diario</a>
+        <a href="/login" class="menu-btn" style="margin-top:auto; background:#2c3e50; color:white;"><i class="fas fa-lock"></i> Acceso Admin</a>
+    </div>
+
+    <div class="main-center" style="padding: 20px 30px;">
+        <header class="header" style="width: 100%; margin-bottom: 15px;">
+            <h2 style="color:var(--red); margin:0;">Sistema de Gestión de Asistencia</h2>
+            <div class="clock" id="reloj">00:00:00</div>
+        </header>
+
+        {% if mensaje %}
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    let tipo = "{{ tipo_mensaje }}";
+                    let icono = tipo === 'error' ? 'error' : (tipo === 'warn' ? 'warning' : 'success');
+                    Swal.fire({ title: 'Notificación', text: "{{ mensaje | safe }}", icon: icono, confirmButtonColor: '#D4001F' });
+                });
+            </script>
+        {% endif %}
+
+        <div class="grid" style="width: 100%;">
+            <div class="card" style="padding: 15px; display: flex; flex-direction: column;">
+                <h3 style="margin-top:0; margin-bottom: 5px;"><i class="fas fa-camera"></i> Registro Automático</h3>
+                
+                <div id="camera-container" style="height: 180px; margin-bottom: 10px;">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="rec-dot"></div>
+                </div>
+                
+                <form method="POST" action="/" id="form-asistencia">
+                    <div class="form-row" style="margin-bottom: 5px;">
+                        <div class="col">
+                            <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:2px; display:block;">Cédula</label>
+                            <input type="text" name="cedula" id="cedula_input" placeholder="Ej: 28123456" required autocomplete="off" pattern="\d*" maxlength="8" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" style="padding: 6px; font-size: 0.9rem; margin:0;">
+                        </div>
+                        <div class="col">
+                            <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:2px; display:block;">Nombre</label>
+                            <input type="text" name="nombre" id="nombre_input" readonly style="padding: 6px; font-size: 0.9rem; margin:0;">
+                        </div>
+                    </div>
+                    <span id="status-msg" style="color:#777; font-size: 0.75rem; margin-bottom: 5px; display: block; height: 12px;">Esperando cédula...</span>
+
+                    <div class="form-row" style="margin-bottom: 10px;">
+                        <div class="col">
+                            <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:2px; display:block;">Dpto</label>
+                            <input type="text" name="departamento" id="depto_input" readonly style="padding: 6px; font-size: 0.9rem; margin:0;">
+                        </div>
+                        <div class="col">
+                            <label style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:2px; display:block;">Cargo</label>
+                            <input type="text" name="cargo" id="cargo_input" readonly style="color:#1a73e8; padding: 6px; font-size: 0.9rem; margin:0;">
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="foto_base64" id="foto_base64">
+                    <input type="hidden" name="accion" id="accion">
+                    
+                    <div class="form-row" style="margin-top: auto;">
+                        <div class="col">
+                            <button type="button" id="btn-ent" onclick="tomarFoto('entrada')" class="btn-in" disabled style="padding: 10px; margin: 0;"><i class="fas fa-sign-in-alt"></i> ENTRADA</button>
+                        </div>
+                        <div class="col">
+                            <button type="button" id="btn-sal" onclick="tomarFoto('salida')" class="btn-out" disabled style="padding: 10px; margin: 0;"><i class="fas fa-sign-out-alt"></i> SALIDA</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card" style="padding: 15px;">
+                <h3 style="margin-top:0; margin-bottom: 10px;">📋 Bitácora en Vivo (Hoy)</h3>
+                <div style="overflow-y: auto; max-height: 400px;">
+                    <table>
+                        <thead><tr><th>Fotos (E/S)</th><th>Personal</th><th>Cargo</th><th>Entrada</th><th>Salida</th></tr></thead>
+                        <tbody>
+                            {% if registros %}
+                                {% for row in registros %}
+                                    <tr style='border-bottom:1px solid #eee;'>
+                                        <td>
+                                            <div class="photo-pair">
+                                                {% if row.foto_entrada %}<img src="{{ url_for('serve_foto', filename=row.foto_entrada) }}" width='35' height='35' style='border-radius:50%; object-fit:cover; border:2px solid #27ae60; cursor:pointer;' onclick="verFotoGrande(this.src)">{% else %}<div style='width:35px; height:35px; background:#eee; border-radius:50%; display:flex; align-items:center; justify-content:center;'>👤</div>{% endif %}
+                                                {% if row.foto_salida %}<img src="{{ url_for('serve_foto', filename=row.foto_salida) }}" width='35' height='35' style='border-radius:50%; object-fit:cover; border:2px solid var(--red); cursor:pointer;' onclick="verFotoGrande(this.src)">{% endif %}
+                                            </div>
+                                        </td>
+                                        <td><strong style='color:#333'>{{ row.nombre }}</strong><br><small style='color:#777'>{{ row.departamento }}</small></td>
+                                        <td><span class="cargo-tag">{{ row.cargo }}</span></td>
+                                        <td>
+                                            <div style='font-weight:bold'>{{ row.hora_entrada_fmt }}</div>
+                                            <span class="badge {{ 'bg-orange' if row.estado_entrada == 'TARDÍA' else 'bg-green' }}">{{ row.estado_entrada }}</span>
+                                        </td>
+                                        <td>
+                                            {% if row.estado_salida == 'NO MARCO' %}
+                                                <div style='font-weight:bold; color:#c0392b'>AUTO-CIERRE</div>
+                                                <span class="badge bg-dark">NO MARCÓ</span>
+                                            {% elif row.hora_salida_fmt %}
+                                                <div style='font-weight:bold; color:#555'>{{ row.hora_salida_fmt }}</div>
+                                                <span class="badge {{ 'bg-red' if row.estado_salida == 'ANTICIPADA' else 'bg-green' }}">{{ row.estado_salida }}</span>
+                                            {% else %}
+                                                <div style='font-weight:bold; color:#555'>--:--</div>
+                                                <span class="badge bg-orange" style="background: #95a5a6;">En jornada</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan='5' style='text-align:center; padding:20px; color:#999'>Esperando registros...</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fotoModal" class="modal" onclick="cerrarFotoModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="imgExpandida">
+    </div>
+
+    <script>
+        var modal = document.getElementById("fotoModal");
+        var modalImg = document.getElementById("imgExpandida");
+        function verFotoGrande(src) { modal.style.display = "block"; modalImg.src = src; }
+        function cerrarFotoModal() { modal.style.display = "none"; }
+
+        setInterval(() => { document.getElementById('reloj').innerText = new Date().toLocaleTimeString('es-VE'); }, 1000);
+        
+        const video = document.getElementById('video');
+        if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) { 
+            navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) { video.srcObject = stream; video.play(); }).catch(function(e) {}); 
+        }
+
+        const cedulaInput = document.getElementById('cedula_input');
+        const nombreInput = document.getElementById('nombre_input');
+        const deptoInput = document.getElementById('depto_input');
+        const cargoInput = document.getElementById('cargo_input');
+        const statusMsg = document.getElementById('status-msg');
+        const btnEnt = document.getElementById('btn-ent');
+        const btnSal = document.getElementById('btn-sal');
+
+        window.horaSalidaOficial = "14:00"; 
+
+        cedulaInput.addEventListener('input', function() {
+            let cedula = this.value;
+            if (cedula.length >= 7) {
+                statusMsg.innerText = "🔍 Identificando personal...";
+                statusMsg.style.color = "#f39c12";
+
+                let formData = new FormData(); formData.append('cedula', cedula);
+                fetch('/buscar_personal', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        nombreInput.value = data.nombre;
+                        deptoInput.value = data.departamento;
+                        cargoInput.value = data.cargo;
+                        
+                        // BLOQUEO ESTRICTO SI NO HAY HORARIO
+                        if (data.error_msg) {
+                            statusMsg.innerHTML = "⛔ " + data.error_msg;
+                            statusMsg.style.color = "#c0392b";
+                            btnEnt.disabled = true; btnSal.disabled = true;
+                        } else {
+                            window.horaSalidaOficial = data.hora_salida_esperada; 
+                            
+                            if (data.ha_marcado_entrada && data.ha_marcado_salida) {
+                                statusMsg.innerHTML = "✅ Jornada de hoy completada.";
+                                statusMsg.style.color = "#27ae60";
+                                btnEnt.disabled = true; btnSal.disabled = true;
+                            } else if (data.ha_marcado_entrada) {
+                                statusMsg.innerHTML = "✅ En sede. Puede marcar salida.";
+                                statusMsg.style.color = "#e67e22";
+                                btnEnt.disabled = true; btnSal.disabled = false;
+                            } else {
+                                statusMsg.innerHTML = "✅ Verificado. Marque entrada.";
+                                statusMsg.style.color = "#27ae60";
+                                btnEnt.disabled = false; btnSal.disabled = true;
+                            }
+                        }
+                    } else {
+                        nombreInput.value = deptoInput.value = cargoInput.value = "";
+                        statusMsg.innerText = "❌ No encontrado en nómina";
+                        statusMsg.style.color = "#c0392b";
+                        btnEnt.disabled = btnSal.disabled = true;
+                    }
+                }).catch(e => console.error(e));
+            } else {
+                nombreInput.value = deptoInput.value = cargoInput.value = "";
+                statusMsg.innerText = "Esperando cédula...";
+                statusMsg.style.color = "#777";
+                btnEnt.disabled = btnSal.disabled = true;
+            }
+        });
+
+        async function tomarFoto(tipo) {
+            const cedula = cedulaInput.value;
+            if(cedula.trim() === "") { Swal.fire('Atención', 'Por favor ingresa la Cédula', 'warning'); return; }
+
+            const MODO_SIN_CAMARA = false; 
+            let base64Data = "";
+
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                if (!MODO_SIN_CAMARA) {
+                    Swal.fire({ title: '📷 Cámara no detectada', text: 'Conecta una webcam o da permisos.', icon: 'error', confirmButtonColor: '#D4001F' });
+                    return; 
+                }
+            } else {
+                const canvas = document.createElement('canvas');
+                let width = video.videoWidth, height = video.videoHeight;
+                const MAX_WIDTH = 800;
+                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+                base64Data = canvas.toDataURL('image/jpeg', 0.6);
+            }
+            
+            let observacion = "";
+            if (tipo === 'salida') {
+                const ahora = new Date();
+                let [hExp, mExp] = window.horaSalidaOficial.split(':').map(Number);
+                let metaSalida = new Date();
+                metaSalida.setHours(hExp, mExp, 0);
+
+                if (ahora < metaSalida) { 
+                    const { value: text } = await Swal.fire({
+                        title: '⚠️ Salida Anticipada',
+                        input: 'text',
+                        inputLabel: 'Sales antes de tu horario (' + window.horaSalidaOficial + '). Indica el motivo:',
+                        inputPlaceholder: 'Ej: Permiso médico...',
+                        icon: 'warning', showCancelButton: true, confirmButtonColor: '#e67e22', cancelButtonColor: '#777',
+                        confirmButtonText: 'Registrar', cancelButtonText: 'Cancelar'
+                    });
+                    if (!text || text.trim() === "") { Swal.fire('Cancelado', 'Debes justificar tu salida.', 'error'); return; }
+                    observacion = text;
+                }
+            }
+            
+            let inputObs = document.getElementById('observacion_hidden');
+            if (!inputObs) {
+                inputObs = document.createElement('input'); inputObs.type = 'hidden'; inputObs.name = 'observacion'; inputObs.id = 'observacion_hidden';
+                document.getElementById('form-asistencia').appendChild(inputObs);
+            }
+            inputObs.value = observacion;
+            document.getElementById('foto_base64').value = base64Data;
+            document.getElementById('accion').value = tipo;
+            document.getElementById('form-asistencia').submit();
+        }
+    </script>
+</body>
+</html>

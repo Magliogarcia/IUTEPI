@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Novedades | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/material_red.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+</head>
+<body class="dashboard-bg">
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container">
+            <a href="/registrar_personal" class="menu-btn"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn active"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container" style="display: block;"><a href="/registrar_novedad" class="menu-btn active"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+
+        <button class="dropdown-btn"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/crear_admin" class="menu-btn"><i class="fas fa-key"></i> Administradores</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center">
+        <div class="card card-form">
+            <h2 style="color:#e67e22; margin-top:0; text-align:center;"><i class="fas fa-notes-medical"></i> Registrar Novedad</h2>
+            
+            {% if mensaje %}
+                {{ mensaje|safe }}
+            {% endif %}
+
+            {% if not nombre_encontrado %}
+                <form method="POST">
+                    <label style="font-size:0.85rem; font-weight:bold; color:#555;">Ingrese Cédula del Personal:</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" name="cedula" required placeholder="Ej: 28319342" value="{{ cedula_buscada }}">
+                        <button type="submit" name="buscar_cedula" class="btn-blue" style="width:auto;"><i class="fas fa-search"></i></button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="info-user" style="font-size: 1.1rem; padding: 15px;"><i class="fas fa-user-check"></i> {{ nombre_encontrado }}</div>
+                <form method="POST">
+                    <input type="hidden" name="cedula_final" value="{{ cedula_buscada }}">
+                    
+                    <label style="font-size:0.85rem; font-weight:bold; color:#555;">Tipo de Novedad:</label>
+                    <select name="tipo" id="tipo_novedad" required>
+                        <option value="VACACIONES" selected>🏖️ Vacaciones</option>
+                        <option value="REPOSO MÉDICO">🚑 Reposo Médico</option>
+                        <option value="PERMISO">📝 Permiso Personal</option>
+                        <option value="SUSPENSIÓN">🚫 Suspensión</option>
+                    </select>
+                    
+                    <div class="date-container">
+                        <div class="date-box">
+                            <label>Desde:</label>
+                            <div class="custom-date-wrapper">
+                                <input type="text" name="fecha_inicio" class="datepicker custom-date-input" placeholder="DD / MM / AAAA" autocomplete="off" required value="{{ hoy }}">
+                                <i class="fas fa-calendar-alt calendar-icon"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="date-box">
+                            <label>Hasta:</label>
+                            <div class="custom-date-wrapper">
+                                <input type="text" name="fecha_fin" class="datepicker custom-date-input" placeholder="DD / MM / AAAA" autocomplete="off" required>
+                                <i class="fas fa-calendar-alt calendar-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="caja_descripcion" style="display: none;">
+                        <label style="font-size:0.85rem; font-weight:bold; color:#555;">Descripción / Observación:</label>
+                        <textarea name="descripcion" id="input_descripcion" rows="2" placeholder="Ej: Operación de rodilla, Asunto personal..."></textarea>
+                    </div>
+
+                    <button type="submit" name="guardar_novedad" class="btn-orange" style="margin-top: 15px; font-size: 1rem;"><i class="fas fa-lock"></i> GUARDAR Y BLOQUEAR</button>
+                    <a href="/registrar_novedad" style="display:block; text-align:center; margin-top:15px; color:#666; text-decoration:none; font-size:0.85rem; font-weight: bold;">Cancelar y volver a buscar</a>
+                </form>
+            {% endif %}
+        </div>
+
+        <div class="card" style="width: 100%; max-width: 800px;">
+            <h3 style="margin-top:0; border-left: 5px solid #e67e22; padding-left: 10px;">Historial de Novedades Activas / Pasadas</h3>
+            <table>
+                <thead>
+                    <tr><th>Personal</th><th>Tipo</th><th>Fechas</th><th>Descripción</th><th>Acción</th></tr>
+                </thead>
+                <tbody>
+                    {% if novedades_list %}
+                        {% for n in novedades_list %}
+                        <tr>
+                            <td style="font-weight:bold;">{{ n.nombre }}<br><small style="color:#777">{{ n.cedula }}</small></td>
+                            <td><span class="badge bg-orange">{{ n.tipo }}</span></td>
+                            <td>De: {{ n.fecha_inicio }}<br>A: {{ n.fecha_fin }}</td>
+                            <td style="font-style:italic;">{{ n.descripcion if n.descripcion else "-" }}</td>
+                            <td style="text-align:center;">
+                                <a href="#" class="btn-delete-small badge bg-red" style="text-decoration:none;" 
+                                   onclick="confirmarBorradoNovedad(event, '/eliminar_novedad/{{ n.id }}')">
+                                   <i class="fas fa-eraser"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" style="text-align:center; padding: 20px;">No hay reposos ni permisos registrados.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            flatpickr(".datepicker", {
+                locale: "es",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                allowInput: true,
+                disableMobile: "true" 
+            });
+
+            var currentUrl = window.location.pathname;
+            var links = document.querySelectorAll('.dropdown-container a');
+            links.forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) {
+                    link.classList.add('active');
+                    link.parentElement.style.display = 'block';
+                    link.parentElement.previousElementSibling.classList.add('active');
+                }
+            });
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            }
+
+            var selectTipo = document.getElementById('tipo_novedad');
+            var cajaDesc = document.getElementById('caja_descripcion');
+            var inputDesc = document.getElementById('input_descripcion');
+
+            if (selectTipo) {
+                selectTipo.addEventListener('change', function() {
+                    if (this.value === 'VACACIONES') {
+                        cajaDesc.style.display = 'none'; 
+                        inputDesc.value = ''; 
+                    } else {
+                        cajaDesc.style.display = 'block'; 
+                    }
+                });
+                selectTipo.dispatchEvent(new Event('change'));
+            }
+        });
+
+        function confirmarBorradoNovedad(e, url) {
+            e.preventDefault();
+            Swal.fire({
+                title: '⚠️ ¡ATENCIÓN!',
+                text: '¿Deseas eliminar este registro de novedad (Reposo/Vacaciones)? Esto volverá a habilitar la asistencia para esta persona de inmediato.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e67e22',
+                cancelButtonColor: '#777',
+                confirmButtonText: 'Sí, eliminar novedad',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

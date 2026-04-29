@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Personal | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="dashboard-bg">
+
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn active"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container" style="display: block;">
+            <a href="/registrar_personal" class="menu-btn active"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/crear_admin" class="menu-btn"><i class="fas fa-key"></i> Administradores</a></div>
+
+        <button class="dropdown-btn"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/registrar_novedad" class="menu-btn"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center">
+        <div class="card card-form">
+            <h2 style="color:#3498db; margin-top:0; text-align:center;"><i class="fas fa-user-edit"></i> Editar Personal</h2>
+            <p style="text-align:center; color:#666; font-size:0.9rem;">Modifica los datos del empleado seleccionado.</p>
+            
+            {% if empleado %}
+            <form method="POST" id="form-editar" novalidate>
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Cédula de Identidad</label>
+                <input type="text" name="cedula" id="input_cedula" value="{{ empleado.cedula }}" 
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                
+                <div class="form-row">
+                    <div class="col">
+                        <label style="font-size:0.85rem; font-weight:bold; color:#555;">Nombre</label>
+                        <input type="text" name="nombre" id="input_nombre" value="{{ nom }}" 
+                               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 15)">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.85rem; font-weight:bold; color:#555;">Apellido</label>
+                        <input type="text" name="apellido" id="input_apellido" value="{{ ape }}" 
+                               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 15)">
+                    </div>
+                </div>
+                
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Departamento</label>
+                <select name="departamento" id="input_depto" required>
+                    <option value="Administrativo" {% if empleado.departamento == 'Administrativo' %}selected{% endif %}>Administrativo</option>
+                    <option value="Ambiente" {% if empleado.departamento == 'Ambiente' %}selected{% endif %}>Ambiente</option>
+                    <option value="Docente" {% if empleado.departamento == 'Docente' %}selected{% endif %}>Docente</option>
+                </select>
+
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Cargo / Área</label>
+                <input type="text" name="cargo" id="input_cargo" value="{{ empleado.cargo }}" 
+                       oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').slice(0, 25)">
+                
+                <button type="submit" class="btn-blue"><i class="fas fa-sync-alt"></i> ACTUALIZAR DATOS</button>
+                <a href="/registrar_personal" style="display:block; text-align:center; margin-top:15px; color:#777; text-decoration:none; font-weight:bold;">Cancelar</a>
+            </form>
+            {% else %}
+                <p style="text-align:center; color:#c0392b; font-weight: bold;">Error: Empleado no encontrado en la base de datos.</p>
+                <a href="/registrar_personal" style="display:block; text-align:center; margin-top:15px;">Volver</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    content.style.display = content.style.display === "block" ? "none" : "block";
+                });
+            }
+        });
+
+        let form = document.getElementById('form-editar');
+        if(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                let cedula = document.getElementById('input_cedula').value.trim();
+                let nombre = document.getElementById('input_nombre').value.trim();
+                let apellido = document.getElementById('input_apellido').value.trim();
+                let cargo = document.getElementById('input_cargo').value.trim();
+
+                if (cedula.length < 7 || cedula.length > 8) {
+                    Swal.fire('Error', 'La cédula debe tener exactamente entre 7 y 8 números.', 'error');
+                    return;
+                }
+                if (nombre.length < 3 || nombre.length > 15) {
+                    Swal.fire('Error', 'El nombre debe tener entre 3 y 15 letras.', 'error');
+                    return;
+                }
+                if (apellido.length < 3 || apellido.length > 15) {
+                    Swal.fire('Error', 'El apellido debe tener entre 3 y 15 letras.', 'error');
+                    return;
+                }
+                if (cargo.length < 4 || cargo.length > 25) {
+                    Swal.fire('Error', 'El Cargo / Área debe tener entre 4 y 25 letras.', 'error');
+                    return;
+                }
+                this.submit();
+            });
+        }
+    </script>
+</body>
+</html>

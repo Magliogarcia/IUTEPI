@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Administradores | S.G.A.</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="dashboard-bg">
+    <div class="sidebar">
+        <div class="logo-box"><img src="{{ url_for('static', filename='img/IUTEPI Logo.png') }}" alt="IUTEPI"></div>
+        <div style="margin-bottom: 20px; text-align: center; color: #777; font-size: 0.9rem;">
+            <i class="fas fa-user-circle"></i> Admin: <strong>{{ usuario_actual }}</strong>
+        </div>
+        
+        <a href="/admin_panel" class="menu-btn"><i class="fas fa-table"></i> Reportes y Auditoría</a>
+        <a href="/rendimiento" class="menu-btn"><i class="fas fa-chart-pie"></i> Rendimiento</a>
+        
+        <button class="dropdown-btn"><i class="fas fa-users"></i> Personal <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container">
+            <a href="/registrar_personal" class="menu-btn"><i class="fas fa-id-badge"></i> Directorio y Registro</a>
+            <a href="/gestionar_horarios" class="menu-btn"><i class="fas fa-clock"></i> Asignar Horarios</a>
+        </div>
+
+        <button class="dropdown-btn"><i class="fas fa-notes-medical"></i> Novedades <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container"><a href="/registrar_novedad" class="menu-btn"><i class="fas fa-file-medical"></i> Reposos y Permisos</a></div>
+
+        <button class="dropdown-btn active"><i class="fas fa-user-shield"></i> Accesos <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-container" style="display: block;"><a href="/crear_admin" class="menu-btn active"><i class="fas fa-key"></i> Administradores</a></div>
+        
+        <a href="/logout" class="menu-btn" style="margin-top:auto; background:#c0392b; color:white;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-center">
+        <div class="card card-form">
+            <h2 style="color:var(--red); margin-top:0; text-align:center;"><i class="fas fa-user-plus"></i> Nuevo Administrador</h2>
+            {% if mensaje %} {{ mensaje|safe }} {% endif %}
+            <form method="POST">
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Nombre de Usuario</label>
+                <input type="text" name="nuevo_usuario" placeholder="Ej: secretaria" required>
+                
+                <label style="font-size:0.85rem; font-weight:bold; color:#555;">Contraseña</label>
+                <div class="password-wrapper" style="margin-bottom: 15px;">
+                    <div class="password-container" style="margin: 0;">
+                        <input type="password" name="nuevo_pass" id="passInput" placeholder="Contraseña Segura" required style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; margin: 0;">
+                        <i class="fas fa-eye toggle-password" id="togglePassIcon"></i>
+                    </div>
+                    <div class="strength-meter"><div class="strength-fill" id="meterFill"></div></div>
+                </div>
+
+                <ul class="req-list" id="reqList">
+                    <li id="req-len" class="invalid"><i class="fas fa-times-circle"></i> Mínimo 8 caracteres</li>
+                    <li id="req-upper" class="invalid"><i class="fas fa-times-circle"></i> Al menos 1 mayúscula</li>
+                    <li id="req-lower" class="invalid"><i class="fas fa-times-circle"></i> Al menos 1 minúscula</li>
+                    <li id="req-num" class="invalid"><i class="fas fa-times-circle"></i> Al menos 1 número</li>
+                    <li id="req-spec" class="invalid"><i class="fas fa-times-circle"></i> Al menos 1 símbolo especial</li>
+                </ul>
+
+                <button type="submit">CREAR USUARIO ADMIN</button>
+            </form>
+        </div>
+
+        <div class="card" style="width: 100%; max-width: 600px;">
+            <h3 style="margin-top:0; border-left: 5px solid var(--red); padding-left: 10px;">Administradores Activos</h3>
+            <table>
+                <thead><tr><th>Usuario</th><th>Acción</th></tr></thead>
+                <tbody>
+                    {% for admin in admins %}
+                    <tr>
+                        <td style="font-weight:bold;">{{ admin.usuario }}</td>
+                        <td style="text-align:center;">
+                            {% if admin.usuario == 'admin' %}
+                                <span class="badge bg-blue" style="background:#2c3e50;"><i class="fas fa-shield-alt"></i> Maestro (Protegido)</span>
+                            {% elif admin.usuario == usuario_actual %}
+                                <span class="badge bg-green">Tú (Actual)</span>
+                            {% else %}
+                                <a href="#" class="btn-delete-small badge bg-red" style="text-decoration:none;" onclick="confirmarEliminacionAdmin(event, '/eliminar_admin/{{ admin.id }}', '{{ admin.usuario }}')"><i class="fas fa-trash"></i> Revocar Acceso</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var currentUrl = window.location.pathname;
+            var links = document.querySelectorAll('.dropdown-container a');
+            links.forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) { link.classList.add('active'); link.parentElement.style.display = 'block'; }
+            });
+            var dropdowns = document.getElementsByClassName("dropdown-btn");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].addEventListener("click", function() { this.classList.toggle("active"); var c = this.nextElementSibling; c.style.display = c.style.display === "block" ? "none" : "block"; });
+            }
+        });
+
+        function confirmarEliminacionAdmin(e, url, u) {
+            e.preventDefault(); Swal.fire({ title:'⚠️ ADVERTENCIA', text:`¿Revocar acceso a ${u}?`, icon:'warning', showCancelButton:true, confirmButtonColor:'#c0392b', confirmButtonText:'Sí' }).then((r) => { if(r.isConfirmed) window.location.href = url; });
+        }
+
+        const passInput = document.getElementById('passInput');
+        const meterFill = document.getElementById('meterFill');
+        const reqs = { len: { regex: /.{8,}/, el: document.getElementById('req-len') }, upper: { regex: /[A-Z]/, el: document.getElementById('req-upper') }, lower: { regex: /[a-z]/, el: document.getElementById('req-lower') }, num: { regex: /\d/, el: document.getElementById('req-num') }, spec: { regex: /[@$!%*?&#.\-_]/, el: document.getElementById('req-spec') } };
+
+        if (passInput) {
+            passInput.addEventListener('input', () => {
+                const val = passInput.value; let score = 0;
+                for (let key in reqs) {
+                    const isValid = reqs[key].regex.test(val); const el = reqs[key].el; const icon = el.querySelector('i');
+                    if (isValid) { score++; el.classList.remove('invalid'); el.classList.add('valid'); icon.classList.remove('fa-times-circle'); icon.classList.add('fa-check-circle'); } 
+                    else { el.classList.remove('valid'); el.classList.add('invalid'); icon.classList.remove('fa-check-circle'); icon.classList.add('fa-times-circle'); }
+                }
+                const pct = (score / 5) * 100; meterFill.style.width = pct + '%';
+                if (score <= 2) { meterFill.style.backgroundColor = '#c0392b'; } else if (score <= 4) { meterFill.style.backgroundColor = '#f39c12'; } else { meterFill.style.backgroundColor = '#27ae60'; }
+            });
+        }
+
+        const toggleIcon = document.getElementById('togglePassIcon');
+        toggleIcon.addEventListener('click', function() {
+            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passInput.setAttribute('type', type);
+            this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash');
+        });
+    </script>
+</body>
+</html>
